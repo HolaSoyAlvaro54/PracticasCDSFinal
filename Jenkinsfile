@@ -31,11 +31,14 @@ pipeline {
             }
         }
 
-        stage('Quality Gate') {
+                stage('Quality Gate') {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
-                    def qg = waitForQualityGate()
-                    echo "Quality Gate Status: ${qg.status}"
+                    // IMPORTANTE: Hemos añadido 'script' alrededor
+                    script { 
+                        def qg = waitForQualityGate()
+                        echo "Quality Gate Status: ${qg.status}"
+                    }
                 }
             }
         }
