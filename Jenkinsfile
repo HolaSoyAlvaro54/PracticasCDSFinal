@@ -8,9 +8,6 @@ pipeline {
     environment {
         IMAGE_NAME = 'practicas-cds'
         IMAGE_TAG = 'v1.0'
-        // Asegúrese de que en Jenkins las credenciales se llamen 'nexus-creds'
-        // con usuario 'admin' y contraseña '1928'
-        NEXUS_CREDS = credentials('nexus-creds') 
         FAILED_STAGE = "Preparación de Artillería" 
     }
 
@@ -64,17 +61,12 @@ pipeline {
             steps {
                 script { 
                     env.FAILED_STAGE = "Upload to Nexus" 
-                    
-                    // MANIOBRA DE INFILTRACIÓN: Generamos el settings al vuelo
-                    withCredentials([usernamePassword(credentialsId: 'nexus-creds', 
-                                     passwordVariable: '1928', 
-                                     usernameVariable: 'admin')]) {
-                        sh """
-                            echo '<settings><servers><server><id>nexus-snapshots</id><username>${admin}</username><password>${1928}</password></server><server><id>nexus-releases</id><username>${NEXUS_USER}</username><password>${NEXUS_PASSWORD}</password></server></servers></settings>' > settings_tmp.xml
-                            mvn -s settings_tmp.xml deploy -DskipTests
-                            rm settings_tmp.xml
-                        """
-                    }
+                    // MANIOBRA DE INFILTRACIÓN DIRECTA CON CREDENCIALES FORJADAS
+                    sh """
+                        echo '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"><servers><server><id>nexus-snapshots</id><username>admin</username><password>1928</password></server><server><id>nexus-releases</id><username>admin</username><password>1928</password></server></servers></settings>' > settings_tmp.xml
+                        mvn -s settings_tmp.xml deploy -DskipTests
+                        rm settings_tmp.xml
+                    """
                 }
             }
         }
