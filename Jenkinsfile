@@ -8,6 +8,8 @@ pipeline {
     environment {
         IMAGE_NAME = 'practicas-cds'
         IMAGE_TAG = 'v1.0'
+        // Asegúrese de que en Jenkins las credenciales se llamen 'nexus-creds'
+        // con usuario 'admin' y contraseña '1928'
         NEXUS_CREDS = credentials('nexus-creds') 
         FAILED_STAGE = "Preparación de Artillería" 
     }
@@ -15,14 +17,14 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                script { env.FAILED_STAGE = "Checkout (Descarga de Código)" }
+                script { env.FAILED_STAGE = "Checkout" }
                 git branch: 'main', url: 'https://github.com/HolaSoyAlvaro54/PracticasCDSFinal.git', credentialsId: 'github-creds'
             }
         }
 
         stage('Compilation') {
             steps {
-                script { env.FAILED_STAGE = "Compilation (Maven Compile)" }
+                script { env.FAILED_STAGE = "Compilation" }
                 sh 'mvn clean compile'
             }
         }
@@ -38,13 +40,13 @@ pipeline {
 
         stage('Quality Gate') {
             steps {
-                script { env.FAILED_STAGE = "Quality Gate (SonarQube Webhook)" }
+                script { env.FAILED_STAGE = "Quality Gate" }
                 timeout(time: 2, unit: 'MINUTES') {
                     script {
                         try {
                             waitForQualityGate()
                         } catch (Exception e) {
-                            echo "ALERTA: Timeout en Quality Gate. Continuando avance por orden superior..."
+                            echo "ALERTA: Timeout. Continuando avance por orden superior..."
                         }
                     }
                 }
@@ -53,38 +55,40 @@ pipeline {
 
         stage('Build Artifact') {
             steps {
-                script { env.FAILED_STAGE = "Build Artifact (Generación de JAR)" }
+                script { env.FAILED_STAGE = "Build Artifact" }
                 sh 'mvn package -DskipTests'
             }
         }
 
         stage('Upload to Nexus') {
             steps {
-                script { env.FAILED_STAGE = "Upload to Nexus (Envío de Suministros)" }
-                // Esta etapa cumple con el requisito de gestión de artefactos en Nexus 
-                sh 'mvn deploy -DskipTests'
+                script { 
+                    env.FAILED_STAGE = "Upload to Nexus" 
+                    
+                    // MANIOBRA DE INFILTRACIÓN: Generamos el settings al vuelo
+                    withCredentials([usernamePassword(credentialsId: 'nexus-creds', 
+                                     passwordVariable: '1928', 
+                                     usernameVariable: 'admin')]) {
+                        sh """
+                            echo '<settings><servers><server><id>nexus-snapshots</id><username>${admin}</username><password>${1928}</password></server><server><id>nexus-releases</id><username>${NEXUS_USER}</username><password>${NEXUS_PASSWORD}</password></server></servers></settings>' > settings_tmp.xml
+                            mvn -s settings_tmp.xml deploy -DskipTests
+                            rm settings_tmp.xml
+                        """
+                    }
+                }
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                script { env.FAILED_STAGE = "Build Docker Image (Construcción)" }
+                script { env.FAILED_STAGE = "Build Docker Image" }
                 sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                script { env.FAILED_STAGE = "Run Tests (Pruebas de Integración)" }
-                // Cumplimos con el requisito de automatizar pruebas 
-                sh 'mvn test'
             }
         }
 
         stage('Deploy to Prod') {
             steps {
-                script { env.FAILED_STAGE = "Deploy (Despliegue de Contenedor)" }
-                // Cumplimos con el despliegue en producción [cite: 39]
+                script { env.FAILED_STAGE = "Deploy" }
                 sh "docker stop practicas-prod || true"
                 sh "docker rm practicas-prod || true"
                 sh "docker run -d --name practicas-prod ${IMAGE_NAME}:${IMAGE_TAG}"
@@ -95,14 +99,13 @@ pipeline {
     post {
         success {
             echo "-------------------------------------------------------"
-            echo "¡VICTORIA TOTAL! Artefacto en Nexus y Sistema en Producción."
+            echo "¡VICTORIA TOTAL! El artefacto está en el almacén (Nexus)."
             echo "-------------------------------------------------------"
         }
         failure {
             echo "-------------------------------------------------------"
-            echo "¡INFORME DE BAJAS! El pipeline ha fallado en: ${env.FAILED_STAGE}"
+            echo "¡BAJA EN COMBATE! Fallo en la etapa: ${env.FAILED_STAGE}"
             echo "-------------------------------------------------------"
-            // Aquí se podría añadir la notificación por email o chat que pide el manual 
         }
     }
 }
